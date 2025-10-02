@@ -36,7 +36,8 @@ typedef	struct s_ref
 	int	rounds;
 }	t_ref;
 	
-
+// VALIDATE
+int		has_valid_args(char *argv1, char *argv2, char *argv3, char *argv4);
 
 // MAKE
 t_philo	**make_players(int amount);
@@ -47,7 +48,10 @@ void	start_sim(t_philo **players, t_ref *referee);
 
 // HELP
 int		ft_atoi(char *str);
+int		ft_space(char c);
 int		put_err_args(int argc);
 int		ft_write(char *str);
+void	exit_sim(t_philo **players, t_ref *referee, int amount);
+int		is_valid_int(char *str);
 
 #endif

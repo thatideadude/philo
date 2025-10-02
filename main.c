@@ -19,10 +19,11 @@ int	main(int argc, char **argv)
 	int			i;
 	struct timeval	current;
 
-	if (argc < 5 || argc > 6)
+	if (argc < 5 || argc > 6 || !has_valid_args(argv[1], argv[2], argv[3], argv[4]))
 		return (put_err_args(argc));
 	players = make_players(ft_atoi(argv[1]));
 	referee = make_referee(ft_atoi(argv[2]), ft_atoi(argv[3]), ft_atoi(argv[4]));
 	// start_sim(players, referee);
+	exit_sim(players, referee, ft_atoi(argv[1]));
 	return (0);
 }

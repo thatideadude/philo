@@ -1,6 +1,5 @@
 #include "philo.h"
 
-
 void	make_sim(t_philo **players, t_ref *referee)
 {
 	int	i;
