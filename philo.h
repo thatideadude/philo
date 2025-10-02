@@ -3,7 +3,7 @@
 /*                                                        :::      ::::::::   */
 /*   philo.h                                            :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: marcemon <marcemon@student.42porto.co      +#+  +:+       +#+        */
+/*   By: marcemon <marcemon@student.42porto.com     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/09/30 14:40:51 by marcemon          #+#    #+#             */
 /*   Updated: 2025/09/30 15:21:00 by marcemon         ###   ########.fr       */
@@ -14,8 +14,40 @@
 # define PHILO_H
 
 # include <unistd.h>
+# include <stdlib.h>
+# include <stdio.h>
+# include <sys/time.h>
 
-int	put_err_args(int argc);
-int	ft_write(char *str);
+typedef struct	s_philo
+{
+	int		id;
+	int		meals;
+	int 	last_meal;
+}	t_philo;
+
+
+
+typedef	struct s_ref
+{
+	struct timeval	start_time;
+	int	time_to_die;
+	int time_to_eat;
+	int	time_to_sleep;
+	int	rounds;
+}	t_ref;
+	
+
+
+// MAKE
+t_philo	**make_players(int amount);
+t_ref	*make_referee(int ms_die, int ms_eat, int ms_sleep);
+
+// SIMULATE
+void	start_sim(t_philo **players, t_ref *referee);
+
+// HELP
+int		ft_atoi(char *str);
+int		put_err_args(int argc);
+int		ft_write(char *str);
 
 #endif
