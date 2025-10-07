@@ -1,11 +1,20 @@
 #include "philo.h"
 
-void	exit_sim(t_philo **players, t_ref *referee, int amount)
+void	exit_sim(t_ref *referee)
 {
-	if (players[0])
-		free(players[0]);
-	if (players)
-		free(players);
+	int	i;
+
+	i = 0;
+	while (i < referee->amount)
+	{
+		free(referee->players[i++]->thread);
+	}
+	if (referee->players[0])
+		free(referee->players[0]);
+	if (referee->players)
+		free(referee->players);
+	if (referee->forks)
+		free(referee->forks);
 	if (referee)
 		free(referee);
 }

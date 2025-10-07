@@ -14,16 +14,13 @@
 
 int	main(int argc, char **argv)
 {
-	t_philo**	players;
 	t_ref		*referee;
-	int			i;
-	struct timeval	current;
 
-	if (argc < 5 || argc > 6 || !has_valid_args(argv[1], argv[2], argv[3], argv[4]))
+	if (argc < 5 || argc > 6 || !has_valid_args(argv[1], argv[2], argv[3], argv[4]) || ft_atoi(argv[1]) < 1)
 		return (put_err_args(argc));
-	players = make_players(ft_atoi(argv[1]));
-	referee = make_referee(ft_atoi(argv[2]), ft_atoi(argv[3]), ft_atoi(argv[4]));
-	// start_sim(players, referee);
-	exit_sim(players, referee, ft_atoi(argv[1]));
+	referee = make_referee(ft_atoi(argv[2]), ft_atoi(argv[3]), ft_atoi(argv[4]), ft_atoi(argv[1]));
+	sleep(1);
+	start_simulation(referee);
+	exit_sim(referee);
 	return (0);
 }

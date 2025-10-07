@@ -1,0 +1,63 @@
+#include "philo.h"
+
+void	eat(int id, t_philo **players, t_ref *referee)
+{
+	//pthread_t	thread;
+	int	time;
+
+	time = referee->time_to_eat;
+	//pthread_create(&thread, NULL, printf("player i is eating", id), NULL);
+	usleep(time);
+	//printf("Player &d is eating", id);
+}
+
+void	rest(int id, t_philo **players, t_ref *referee)
+{
+	usleep(referee->time_to_sleep);
+}
+
+int		check_gameover(t_philo **players, t_ref *referee)
+{
+	int	i;
+
+	i = 0;
+	while (i < referee->amount)
+		if (players[i++]->last_meal > referee->time_to_die)
+			return (1);
+	return (0);
+}
+
+void	*start_routine(t_philo **players, t_ref *referee, int i)
+{
+	pthread_t printer;
+
+	while(1)
+	{
+		if (check_gameover(players, referee))
+			return (NULL);
+		if (i >= referee->amount)
+		if (players[i]->last_meal != 0 && players[i]->meals % 2 != referee->amount % 2)
+		{
+			if (players[i]->id == i)
+				rest(i, players, referee);
+			pthread_mutex_lock(referee->forks[i]);
+			pthread_mutex_lock(referee->forks[i + 1]);
+			pthread_create(&printer, NULL, eat(id, players, referee), NULL);
+			ptread_join(printer);
+			++i;
+		}
+		pthread_unlock(&referee->forks[i]);
+		pthread_unlock(&referee->forks[i + 1]);
+		else if (players[i]->meals % 2 == referee.amount % 2 && i != amount)
+			rest(id, players, referee);
+	}
+} 
+
+void	make_sim(t_philo **players, t_ref *referee)
+{
+	int	i;
+
+	i = 0;
+	while (i < amount)
+		pthread_create(players[i++], NULL, start_rountine(players, referee, i), NULL);
+}

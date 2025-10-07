@@ -14,7 +14,6 @@
 
 int	put_err_args(int argc)
 {
-	if (argc < 5)
-		return (ft_write("not enough args"));
-	return (ft_write("too many args"));
+	(void) argc;
+	return (ft_write("invalid args\n"));
 }
