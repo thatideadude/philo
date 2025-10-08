@@ -6,11 +6,13 @@ void	*local_malloc(char *str, int size)
 	void	*mem;
 	
 	mem = malloc(size);
-	printf("call %d from %s\n", i++, str);
+//	printf("call %d from %s\n", i++, str);
+	(void) str;
+	(void) i;
 	return (mem);
 }
 
-t_philo	**make_players(int amount)
+t_philo	**make_players(t_ref *referee, int amount)
 {
 	t_philo	*philo;
 	t_philo	**group;
@@ -25,7 +27,7 @@ t_philo	**make_players(int amount)
 	{
 		group[i] = &philo[i];
 		philo[i].id = i + 1;
-		philo[i].last_meal = 0;
+		philo[i].last_meal = referee->start_time;
 		++i;
 	}
 	return (group);
@@ -45,16 +47,21 @@ t_ref	*make_referee(int ms_die, int ms_eat, int ms_sleep, int amount)
 	group = local_malloc("line 40\n", sizeof(pthread_mutex_t *) * amount);
 	i = -1;
 	while (++i < amount)
+	{
 		group[i] = &mutex[i];
+		pthread_mutex_init(&mutex[i], NULL);
+	}
 	referee->forks = &group[0];
 	if (!referee->forks)
 		return (ft_write("Malloc error forks"), NULL);
-	//gettimeofday(&referee->start_time, 0);
-	referee->players = make_players(amount);
 	referee->amount = amount;
 	referee->current_round = 0;
 	referee->time_to_die = ms_die;
 	referee->time_to_eat = ms_eat;
 	referee->time_to_eat = ms_sleep;
+	gettimeofday(&referee->start_time, 0);
+	printf("it's now %ld \n", tv_to_ms(&referee->start_time));
+	referee->players = make_players(referee, amount);
+	printf("it's now %ld \n", tv_to_ms(&referee->players[0]->last_meal));
 	return (referee);
-};
+}

@@ -22,16 +22,18 @@
 
 typedef struct	s_philo
 {
-	int			id;
-	int			meals;
-	int 		last_meal;
-	pthread_t	*thread;
+	int				id;
+	int				meals;
+	struct timeval	last_meal;
+	int				is_eating;
+	pthread_t		*thread;
 }	t_philo;
 
 typedef	struct s_ref
 {
 	t_philo			**players;
 	struct timeval	start_time;
+	struct timeval	current_time;
 	int				time_to_die;
 	int				time_to_eat;
 	int				time_to_sleep;
@@ -45,18 +47,20 @@ typedef	struct s_ref
 int		has_valid_args(char *argv1, char *argv2, char *argv3, char *argv4);
 
 // MAKE
-t_philo	**make_players(int amount);
+t_philo	**make_players(t_ref *referee, int amount);
 t_ref	*make_referee(int ms_die, int ms_eat, int ms_sleep, int amount);
 
 // SIMULATE
 void	start_simulation(t_ref *referee);
 
 // HELP
+void	ft_putnbr(int nb);
 int		ft_atoi(char *str);
 int		ft_space(char c);
 int		put_err_args(int argc);
 int		ft_write(char *str);
 void	exit_sim(t_ref *referee);
 int		is_valid_int(char *str);
+long	tv_to_ms(struct timeval *tv);
 
 #endif

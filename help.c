@@ -13,6 +13,21 @@
 #include "philo.h"
 #include <stdio.h>
 
+void	ft_putnbr(int nb)
+{
+	char c;
+
+	if (nb < 0)
+	{
+		ft_write("-");
+		nb *= -1;
+	}
+	if (nb > 9)
+		ft_putnbr(nb / 10);
+	c = nb % 10 + '0';
+	write(1, &c, 1);
+}
+
 int	ft_write(char *str)
 {
 	while (*str)
