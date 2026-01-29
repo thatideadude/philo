@@ -1,0 +1,389 @@
+#include "philo.h"
+
+
+int	ungrab_forks(t_philo *player);
+
+void	ft_putnbr(int nb)
+{
+	char c;
+
+	if (nb < 0)
+	{
+		write(1, "-", 1);
+		nb *= -1;
+	}
+	if (nb > 9)
+		ft_putnbr(nb / 10);
+	c = nb % 10 + '0';
+	write(1, &c, 1);
+}
+
+int	ft_sleep(int time_ms)
+{
+
+	usleep(time_ms * 1000);	
+	return (0);
+}
+
+long	ms_difference(struct timeval *start, struct timeval *now)
+{
+	long seconds;
+	long microseconds;
+	long difference;
+
+	seconds = now->tv_sec - start->tv_sec;
+	microseconds = now->tv_usec - start->tv_usec;
+	if (microseconds < 0)
+	{
+		microseconds += 1000000;
+		seconds -= 1;
+	}
+	difference = seconds * 1000000 + microseconds;
+	return (difference / 1000);
+}
+
+int	die(t_philo *player);
+
+int	should_die(t_philo *player)
+{
+	struct timeval	current_time;
+	long			time;
+	
+	gettimeofday(&current_time, 0);
+	pthread_mutex_lock(&player->board->meal);
+	time = ms_difference(&player->last_meal, &current_time);
+	if (time >= player->time_to_die)
+		return (ungrab_forks(player), pthread_mutex_unlock(&player->board->meal), 1);
+	pthread_mutex_unlock(&player->board->meal);
+	return (0);
+}
+
+int	ft_strcmp(char *s1, char *s2)
+{
+	while (*s1 && *s1 == *s2)
+	{
+		s1++;
+		s2++;
+	}
+	return (*s1 - *s2);
+}
+
+int	all_ok(t_board *board)
+{
+	int	i;
+
+	pthread_mutex_lock(&board->death);
+	i = -1;
+	while (board->players[++i])
+		if(board->players[i]->is_dead)
+			return (pthread_mutex_unlock(&board->death), 0);
+	pthread_mutex_unlock(&board->death);
+	return (1);
+}
+
+int	ft_putstr(t_philo *player, char *str)
+{
+	struct timeval	current_time;
+	long			time;
+	
+	gettimeofday(&current_time, 0);
+	if (!ft_strcmp(str, "is sleeping"))
+		++player->sleeps;
+	pthread_mutex_lock(&player->board->terminal);
+	time = ms_difference(&player->start_time, &current_time);
+	ft_putnbr(time);
+	write(1, " ", 1);
+	ft_putnbr(player->id + 1);
+	write(1, " ", 1);
+	while (*str)
+		write(1, str++, 1);
+	write(1, "\n", 1);
+	pthread_mutex_unlock(&player->board->terminal);
+	return (0);
+}
+
+int	ft_atoi(char *str)
+{
+	int	res;
+	int neg;
+
+	if (!str)
+		return (0);
+	while (str && ((*str >= 7 && *str <= 12) || *str == 32))
+		str++;
+	neg = 1;
+	if (*str == '-' || *str == '+')
+	{
+		if (*str == '-')
+			neg = -1;
+		str++;
+	}
+	res = 0;
+	while (*str >= '0' && *str <= '9')
+	{
+		res = res * 10 + (*str - '0');
+		str++;
+	}
+	return (res * neg);
+}
+
+long	tv_to_ms(struct timeval *tv)
+{
+	long	seconds;
+	long	microseconds;
+	long	total_ms;
+ 
+
+	seconds = tv->tv_sec * 1000000;
+	microseconds = tv->tv_usec;
+	total_ms = (seconds + microseconds) / 1000;
+	return (total_ms);
+}
+
+int	find_last(pthread_mutex_t **forks)
+{
+	int	i;
+
+	i = -1;
+	while (forks[++i])
+		;
+	return (i);
+}
+
+int	grab_forks(t_philo *player)
+{
+	if (!all_ok(player->board))
+		return (1);
+	if (player->id % 2)
+	{
+		if (player->board->forks[player->id + 1])
+			pthread_mutex_lock(player->board->forks[player->id + 1]);
+		else
+			pthread_mutex_lock(player->board->forks[0]);
+	ft_putstr(player, "has taken a fork");
+	pthread_mutex_lock(player->board->forks[player->id]);
+	ft_putstr(player, "has taken a fork");
+	return (0);
+	}
+	pthread_mutex_lock(player->board->forks[player->id]);
+	ft_putstr(player, "has taken a fork");
+	if (player->board->forks[player->id + 1])
+		pthread_mutex_lock(player->board->forks[player->id + 1]);
+	else
+		pthread_mutex_lock(player->board->forks[0]);
+	ft_putstr(player, "has taken a fork");
+	return (0);
+}
+
+int	ungrab_forks(t_philo *player)
+{
+	pthread_mutex_unlock(player->board->forks[player->id]);
+	if (player->board->forks[player->id + 1] != NULL)
+		pthread_mutex_unlock(player->board->forks[player->id + 1]);
+	else
+		pthread_mutex_unlock(player->board->forks[0]);
+	return (0);
+}
+
+int	die(t_philo *player)
+{
+	struct timeval	current_time;
+	long			time;
+	char			*str;
+	int				i;
+
+	i = -1;
+	while (player->board->players[++i]);
+	pthread_mutex_lock(&player->board->terminal);
+	str = "has died\n";
+	gettimeofday(&current_time, 0);
+	time = ms_difference(&player->start_time, &current_time);
+	ft_putnbr(time);
+	write(1, " ", 1);
+	ft_putnbr(player->id + 1);
+	write(1, " ", 1);
+	while (*str)
+		write(1, str++, 1);
+	write(1, "\n", 1);
+	pthread_mutex_lock(&player->board->death);
+	player->is_dead = 1;
+	pthread_mutex_unlock(&player->board->death);
+	pthread_mutex_unlock(&player->board->terminal);
+	return (1);
+}
+int	rest_and_die(t_philo *player)
+{
+	struct timeval	current_time;
+	long			time;
+	char			*str;
+	int				i;
+
+	i = 0;
+	while (player->board->players[i++]);
+	str = "is sleeping";
+	gettimeofday(&current_time, 0);
+	++player->sleeps;
+	pthread_mutex_lock(&player->board->terminal);
+	time = ms_difference(&player->start_time, &current_time);
+	ft_putnbr(time);
+	write(1, " ", 1);
+	ft_putnbr(player->id + 1);
+	write(1, " ", 1);
+	while (*str)
+		write(1, str++, 1);
+	write(1, "\n", 1);
+	pthread_mutex_unlock(&player->board->terminal);
+	die(player);
+	return (0);
+}
+
+int rest(t_philo *player)
+{
+	if (should_die(player))
+		return (rest_and_die(player), 1);
+	if (all_ok(player->board))
+		ft_putstr(player, "is thinking");
+	if (all_ok(player->board))
+	{
+		ft_putstr(player, "is sleeping");
+		ft_sleep(player->time_to_sleep);
+	}
+	return (0);
+}
+
+int	eat(t_philo *player)
+{
+	struct timeval	current_time;
+	
+	gettimeofday(&current_time, 0);
+	if (all_ok(player->board) && !grab_forks(player))
+	{
+		pthread_mutex_lock(&player->board->meal);
+		++player->meals;
+		player->last_meal = current_time;
+		pthread_mutex_unlock(&player->board->meal);
+		ft_putstr(player, "is eating");
+		ft_sleep(player->time_to_eat);
+		ungrab_forks(player);
+	}
+	return (0);
+}
+
+int	take_action(t_philo *player)
+{
+	int		total_actions;
+
+	pthread_mutex_lock(&player->board->action);
+	total_actions = player->meals + player->sleeps;
+	if (!all_ok(player->board))
+		return (1);
+	if (player->id % 2 == total_actions % 2)
+		eat(player);
+	else
+		rest(player);
+	pthread_mutex_unlock(&player->board->action);
+	return (0);
+}
+
+void	*start_routine(void *arg)
+{
+	t_philo * player;
+
+	player = arg;
+	if (!all_ok(player->board))
+	{
+		if (player->id == 1)
+			die(player);
+		return (NULL);
+	}
+	while (all_ok(player->board))
+		take_action((t_philo *)player);
+	return (NULL);
+}
+
+int	start_threads(t_board *board, char **argv)
+{
+	int	i;
+
+	i = -1;
+	if (ft_atoi(argv[1]) == 1)
+		return (write(1, "0 has taken a fork\n", 19), ft_putnbr(ft_atoi(argv[2])), write(1, " 1 has died\n", 12), 0); 
+	while (++i < ft_atoi(argv[1]))
+		pthread_create(&board->players[i]->thread, NULL, start_routine, (void *)board->players[i]);
+	return (0);
+}
+
+t_philo **make_players(t_board *board, char **argv)
+{
+	struct timeval	time;
+	t_philo *player;
+	t_philo	**group;
+	int		i;
+
+	i = -1;
+	player = malloc(sizeof(t_philo) * ft_atoi(argv[1]));
+	group = malloc(sizeof(t_philo *) * (ft_atoi(argv[1]) + 1));
+	gettimeofday(&time, 0);
+	if (!group)
+		return (group);
+	while (++i < ft_atoi(argv[1]))
+	{
+		group[i] = &player[i];
+		player[i].start_time = time;
+		player[i].last_meal = player[i].start_time;
+		player[i].meals = 0;
+		player[i].sleeps = 0;
+		player[i].is_dead = 0;
+		player[i].id = i;
+		player[i].time_to_die = ft_atoi(argv[2]);
+		player[i].time_to_eat = ft_atoi(argv[3]);
+		player[i].time_to_sleep = ft_atoi(argv[4]);
+		player[i].board = board;
+	}
+	group[i] = NULL;
+	return (group);
+}
+
+pthread_mutex_t	**make_forks(int amount, t_board board)
+{
+	pthread_mutex_t	*fork;
+	pthread_mutex_t	**group;
+	int	i;
+
+	fork = malloc(sizeof(pthread_mutex_t) * amount);
+	group = malloc(sizeof(pthread_mutex_t *) * (amount + 1));
+	i = -1;
+	while (++i < amount)
+	{
+		group[i] = &fork[i];	
+		pthread_mutex_init(group[i], NULL);
+	}
+	group[i] = NULL;
+	return (group);
+}
+
+int	start_board(t_board *board, char **argv)
+{
+	pthread_mutex_init(&board->meal, NULL);
+	pthread_mutex_init(&board->death, NULL);
+	pthread_mutex_init(&board->action, NULL);
+	pthread_mutex_lock(&board->action);
+	pthread_mutex_init(&board->terminal, NULL);
+	board->forks = make_forks(ft_atoi(argv[1]), *board);
+	board->players = make_players(board, argv);
+	pthread_mutex_unlock(&board->action);
+	return (0);
+}
+
+int main(int argc, char **argv)
+{
+	t_board	board;
+	int		i;
+
+	i = -1;
+	start_board(&board, argv);
+	start_threads(&board, argv);
+	while (++i < ft_atoi(argv[1]))
+		pthread_join(board.players[i]->thread, NULL);
+	return (0);
+}
