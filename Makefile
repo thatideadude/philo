@@ -1,29 +1,18 @@
-NAME = philo
-
-CFLAGS = -Wall -Wextra -Werror -g
-
-SRCS =	main.c
-
-OBJS = $(SRCS:.c=.o) $(B_SRCS:.c=.o)
-
-.PHONY: all
-all: $(NAME) 
+NAME    = philo
+CC      = cc
+CFLAGS  = -Wall -Wextra -Werror -pthread -g
+SRCS    = main.c actions.c routine.c makers.c
+OBJS    = $(SRCS:.c=.o)
 
 $(NAME): $(OBJS)
-	cc $(CFLAGS) $(OBJS) -o $(NAME)
+	$(CC) $(CFLAGS) $(OBJS) -o $(NAME)
 
-%.o: %.c
-	$(CC) $(CFLAGS) -c $< -o $@
+all: $(NAME)
 
-bonus:	all
-
-.PHONY: clean
 clean:
 	rm -f $(OBJS)
 
-.PHONY: fclean
 fclean: clean
 	rm -f $(NAME)
 
-.PHONY: re
 re: fclean all

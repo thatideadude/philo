@@ -1,188 +1,98 @@
-#include <pthread.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <stdio.h>
-#include <sys/time.h>
+#include "philo.h"
 
-typedef struct s_data	t_data;
-
-typedef struct s_philo
+static int	is_dead(t_philo *p)
 {
-	int				id;
-	long			last_eat;
-	int				meals;
-	pthread_t		thread;
-	pthread_mutex_t	*f1;
-	pthread_mutex_t	*f2;
-	pthread_mutex_t	lock;
-	t_data			*d;
-}	t_philo;
-
-struct s_data
-{
-	int				num;
-	int				die;
-	int				eat;
-	int				sleep;
-	int				must;
-	long			start;
-	int				stop;
-	pthread_mutex_t	write_m;
-	pthread_mutex_t	m_lock;
-	t_philo			*ph;
-	pthread_mutex_t	*forks;
-};
-
-long	get_t(void)
-{
-	struct timeval	tv;
-
-	gettimeofday(&tv, NULL);
-	return ((tv.tv_sec * 1000) + (tv.tv_usec / 1000));
-}
-
-void	p_status(t_philo *p, char *s)
-{
-	pthread_mutex_lock(&p->d->m_lock);
-	if (!p->d->stop)
+	pthread_mutex_lock(&p->board->meal);
+	if (get_t() - p->last_meal >= p->time_to_die)
 	{
-		pthread_mutex_lock(&p->d->write_m);
-		printf("%ld %d %s\n", get_t() - p->d->start, p->id, s);
-		pthread_mutex_unlock(&p->d->write_m);
+		pthread_mutex_unlock(&p->board->meal);
+		die(p);
+		return (1);
 	}
-	pthread_mutex_unlock(&p->d->m_lock);
+	pthread_mutex_unlock(&p->board->meal);
+	return (0);
 }
 
-void	ft_sleep(long ms, t_data *d)
-{
-	long	start;
-
-	start = get_t();
-	while (1)
-	{
-		pthread_mutex_lock(&d->m_lock);
-		if (d->stop)
-		{
-			pthread_mutex_unlock(&d->m_lock);
-			return ;
-		}
-		pthread_mutex_unlock(&d->m_lock);
-		if (get_t() - start >= ms)
-			break ;
-		usleep(100);
-	}
-}
-
-void	*routine(void *arg)
-{
-	t_philo	*p;
-
-	p = (t_philo *)arg;
-	if (p->id % 2 == 0)
-		ft_sleep(p->d->eat, p->d);
-	while (1)
-	{
-		pthread_mutex_lock(p->f1);
-		p_status(p, "has taken a fork");
-		if (p->d->num == 1)
-			return (ft_sleep(p->d->die, p->d), pthread_mutex_unlock(p->f1), NULL);
-		pthread_mutex_lock(p->f2);
-		p_status(p, "has taken a fork");
-		pthread_mutex_lock(&p->lock);
-		p->last_eat = get_t();
-		p->meals++;
-		pthread_mutex_unlock(&p->lock);
-		p_status(p, "is eating");
-		ft_sleep(p->d->eat, p->d);
-		pthread_mutex_unlock(p->f2);
-		pthread_mutex_unlock(p->f1);
-		pthread_mutex_lock(&p->d->m_lock);
-		if (p->d->stop || (p->d->must != -1 && p->meals >= p->d->must))
-			return (pthread_mutex_unlock(&p->d->m_lock), NULL);
-		pthread_mutex_unlock(&p->d->m_lock);
-		p_status(p, "is sleeping");
-		ft_sleep(p->d->sleep, p->d);
-		p_status(p, "is thinking");
-		if (p->d->num % 2)
-			ft_sleep((p->d->eat * 2) - p->d->sleep, p->d);
-	}
-}
-
-void	monitor(t_data *d)
+static int	check_all_full(t_board *b)
 {
 	int	i;
-	int	full;
+	int	full_philos;
 
-	while (1)
+	i = -1;
+	full_philos = 0;
+	while (++i < b->num_philos)
 	{
-		full = 0;
+		pthread_mutex_lock(&b->meal);
+		if (b->players[i]->meals >= b->meals_limit)
+			full_philos++;
+		pthread_mutex_unlock(&b->meal);
+	}
+	if (full_philos == b->num_philos)
+	{
+		pthread_mutex_lock(&b->death);
+		b->is_dead_flag = 1;
+		pthread_mutex_unlock(&b->death);
+		return (1);
+	}
+	return (0);
+}
+
+void	*monitor(void *arg)
+{
+	t_board	*b;
+	int		i;
+
+	b = (t_board *)arg;
+	while (all_ok(b))
+	{
 		i = -1;
-		while (++i < d->num)
+		while (++i < b->num_philos)
 		{
-			pthread_mutex_lock(&d->ph[i].lock);
-			if (get_t() - d->ph[i].last_eat >= d->die)
-			{
-				p_status(&d->ph[i], "died");
-				pthread_mutex_lock(&d->m_lock);
-				d->stop = 1;
-				pthread_mutex_unlock(&d->m_lock);
-				return ((void)pthread_mutex_unlock(&d->ph[i].lock));
-			}
-			if (d->must != -1 && d->ph[i].meals >= d->must)
-				full++;
-			pthread_mutex_unlock(&d->ph[i].lock);
+			if (is_dead(b->players[i]))
+				return (NULL);
 		}
-		if (d->must != -1 && full == d->num)
-		{
-			pthread_mutex_lock(&d->m_lock);
-			d->stop = 1;
-			return ((void)pthread_mutex_unlock(&d->m_lock));
-		}
+		if (b->meals_limit != -1 && check_all_full(b))
+			return (NULL);
 		usleep(500);
+	}
+	return (NULL);
+}
+
+static void	init_mutexes(t_board *b)
+{
+	int	i;
+
+	pthread_mutex_init(&b->meal, NULL);
+	pthread_mutex_init(&b->death, NULL);
+	pthread_mutex_init(&b->terminal, NULL);
+	b->forks = malloc(sizeof(pthread_mutex_t *) * b->num_philos);
+	b->players = malloc(sizeof(t_philo *) * b->num_philos);
+	i = -1;
+	while (++i < b->num_philos)
+	{
+		b->forks[i] = malloc(sizeof(pthread_mutex_t));
+		pthread_mutex_init(b->forks[i], NULL);
 	}
 }
 
-int	main(int ac, char **av)
+int	main(int argc, char **argv)
 {
-	t_data	d;
-	int		i;
+	t_board		b;
+	pthread_t	death_monitor;
+	int			i;
 
-	if (ac < 5 || ac > 6)
+	if (argc < 5 || argc > 6)
 		return (1);
-	d.num = atoi(av[1]); d.die = atoi(av[2]); d.eat = atoi(av[3]);
-	d.sleep = atoi(av[4]); d.must = (ac == 6) ? atoi(av[5]) : -1;
-	d.stop = 0; d.start = get_t();
-	d.ph = malloc(sizeof(t_philo) * d.num);
-	d.forks = malloc(sizeof(pthread_mutex_t) * d.num);
-	pthread_mutex_init(&d.write_m, NULL);
-	pthread_mutex_init(&d.m_lock, NULL);
+	start_board(&b, argv);
+	if (argc == 6)
+		b.meals_limit = ft_atoi(argv[5]);
+	init_mutexes(&b);
+	b.start_time = get_t();
+	make_players(-1, &b, argv);
+	pthread_create(&death_monitor, NULL, monitor, &b);
+	pthread_join(death_monitor, NULL);
 	i = -1;
-	while (++i < d.num)
-	{
-		pthread_mutex_init(&d.forks[i], NULL);
-		pthread_mutex_init(&d.ph[i].lock, NULL);
-		d.ph[i].id = i + 1; d.ph[i].last_eat = d.start;
-		d.ph[i].meals = 0; d.ph[i].d = &d;
-		d.ph[i].f1 = &d.forks[i];
-		d.ph[i].f2 = &d.forks[(i + 1) % d.num];
-		if (d.ph[i].id % 2 == 0)
-		{
-			d.ph[i].f1 = &d.forks[(i + 1) % d.num];
-			d.ph[i].f2 = &d.forks[i];
-		}
-		pthread_create(&d.ph[i].thread, NULL, routine, &d.ph[i]);
-	}
-	monitor(&d);
-	i = -1;
-	while (++i < d.num)
-		pthread_join(d.ph[i].thread, NULL);
-	i = -1;
-	while (++i < d.num)
-	{
-		pthread_mutex_destroy(&d.forks[i]);
-		pthread_mutex_destroy(&d.ph[i].lock);
-	}
-	pthread_mutex_destroy(&d.write_m);
-	pthread_mutex_destroy(&d.m_lock);
-	return (free(d.ph), free(d.forks), 0);
+	while (++i < b.num_philos)
+		pthread_join(b.players[i]->thread, NULL);
+	return (0);
 }
