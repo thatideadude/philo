@@ -1,3 +1,14 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   makers.c                                           :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: marcemon <marcemon@student.42porto.com>    +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2025/06/01 08:56:37 by marcemon          #+#    #+#             */
+/*   Updated: 2025/06/01 08:56:37 by marcemon         ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
 #ifndef PHILO_H
 # define PHILO_H
 
@@ -45,5 +56,6 @@ int		die(t_philo *player);
 int		ft_sleep(int time_ms, t_philo *player);
 void	*start_routine(void *arg);
 void	make_players(int i, t_board	*b, char **argv);
+void	cleanup_board(t_board *b, int i);
 
 #endif

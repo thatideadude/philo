@@ -1,3 +1,14 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   makers.c                                           :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: marcemon <marcemon@student.42porto.com>    +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2025/06/01 08:56:37 by marcemon          #+#    #+#             */
+/*   Updated: 2025/06/01 08:56:37 by marcemon         ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
 #include "philo.h"
 
 void	start_board(t_board *b, char **argv)
@@ -40,30 +51,31 @@ int	ft_putstr(t_philo *player, char *str)
 
 static void	eat_routine(t_philo *p)
 {
-	int	f;
-	int	s;
+	int	right;
+	int	left;
 
-	f = p->id;
-	s = (p->id + 1) % p->board->num_philos;
-	pthread_mutex_lock(p->board->forks[f]);
+	if (p->id % 2 == 0)
+	{
+		right = p->id;
+		left = (p->id + 1) % p->board->num_philos;
+	}
+	else
+	{
+		right = (p->id + 1) % p->board->num_philos;
+		left = p->id;
+	}
+	pthread_mutex_lock(p->board->forks[right]);
 	ft_putstr(p, "has taken a fork");
 	if (p->board->num_philos == 1)
 	{
-		while (all_ok(p->board))
-			usleep(500);
-		pthread_mutex_unlock(p->board->forks[f]);
+		ft_sleep(p->time_to_die, p);
+		pthread_mutex_unlock(p->board->forks[right]);
 		return ;
 	}
-	pthread_mutex_lock(p->board->forks[s]);
+	pthread_mutex_lock(p->board->forks[left]);
 	ft_putstr(p, "has taken a fork");
-	ft_putstr(p, "is eating");
-	pthread_mutex_lock(&p->board->meal);
-	p->last_meal = get_t();
-	p->meals++;
-	pthread_mutex_unlock(&p->board->meal);
-	ft_sleep(p->time_to_eat, p);
-	pthread_mutex_unlock(p->board->forks[f]);
-	pthread_mutex_unlock(p->board->forks[s]);
+	pthread_mutex_unlock(p->board->forks[left]);
+	pthread_mutex_unlock(p->board->forks[right]);
 }
 
 void	*start_routine(void *arg)

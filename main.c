@@ -1,37 +1,49 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   makers.c                                           :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: marcemon <marcemon@student.42porto.com>    +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2025/06/01 08:56:37 by marcemon          #+#    #+#             */
+/*   Updated: 2025/06/01 08:56:37 by marcemon         ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
 #include "philo.h"
 
-static int	is_dead(t_philo *p)
+static int	is_dead(t_philo *philo)
 {
-	pthread_mutex_lock(&p->board->meal);
-	if (get_t() - p->last_meal >= p->time_to_die)
+	pthread_mutex_lock(&philo->board->meal);
+	if (get_t() - philo->last_meal >= philo->time_to_die)
 	{
-		pthread_mutex_unlock(&p->board->meal);
-		die(p);
+		pthread_mutex_unlock(&philo->board->meal);
+		die(philo);
 		return (1);
 	}
-	pthread_mutex_unlock(&p->board->meal);
+	pthread_mutex_unlock(&philo->board->meal);
 	return (0);
 }
 
-static int	check_all_full(t_board *b)
+static int	check_all_full(t_board *board)
 {
 	int	i;
 	int	full_philos;
 
 	i = -1;
 	full_philos = 0;
-	while (++i < b->num_philos)
+	while (++i < board->num_philos)
 	{
-		pthread_mutex_lock(&b->meal);
-		if (b->players[i]->meals >= b->meals_limit)
+		pthread_mutex_lock(&board->meal);
+		if (board->players[i]->meals >= board->meals_limit)
 			full_philos++;
-		pthread_mutex_unlock(&b->meal);
+		pthread_mutex_unlock(&board->meal);
 	}
-	if (full_philos == b->num_philos)
+	if (full_philos == board->num_philos)
 	{
-		pthread_mutex_lock(&b->death);
-		b->is_dead_flag = 1;
-		pthread_mutex_unlock(&b->death);
+		pthread_mutex_lock(&board->death);
+		board->is_dead_flag = 1;
+		pthread_mutex_unlock(&board->death);
 		return (1);
 	}
 	return (0);
@@ -39,60 +51,61 @@ static int	check_all_full(t_board *b)
 
 void	*monitor(void *arg)
 {
-	t_board	*b;
+	t_board	*board;
 	int		i;
 
-	b = (t_board *)arg;
-	while (all_ok(b))
+	board = (t_board *)arg;
+	while (all_ok(board))
 	{
 		i = -1;
-		while (++i < b->num_philos)
+		while (++i < board->num_philos)
 		{
-			if (is_dead(b->players[i]))
+			if (is_dead(board->players[i]))
 				return (NULL);
 		}
-		if (b->meals_limit != -1 && check_all_full(b))
+		if (board->meals_limit != -1 && check_all_full(board))
 			return (NULL);
 		usleep(500);
 	}
 	return (NULL);
 }
 
-static void	init_mutexes(t_board *b)
+static void	init_mutexes(t_board *board)
 {
 	int	i;
 
-	pthread_mutex_init(&b->meal, NULL);
-	pthread_mutex_init(&b->death, NULL);
-	pthread_mutex_init(&b->terminal, NULL);
-	b->forks = malloc(sizeof(pthread_mutex_t *) * b->num_philos);
-	b->players = malloc(sizeof(t_philo *) * b->num_philos);
+	pthread_mutex_init(&board->meal, NULL);
+	pthread_mutex_init(&board->death, NULL);
+	pthread_mutex_init(&board->terminal, NULL);
+	board->forks = malloc(sizeof(pthread_mutex_t *) * board->num_philos);
+	board->players = malloc(sizeof(t_philo *) * board->num_philos);
 	i = -1;
-	while (++i < b->num_philos)
+	while (++i < board->num_philos)
 	{
-		b->forks[i] = malloc(sizeof(pthread_mutex_t));
-		pthread_mutex_init(b->forks[i], NULL);
+		board->forks[i] = malloc(sizeof(pthread_mutex_t));
+		pthread_mutex_init(board->forks[i], NULL);
 	}
 }
 
 int	main(int argc, char **argv)
 {
-	t_board		b;
+	t_board		board;
 	pthread_t	death_monitor;
 	int			i;
 
 	if (argc < 5 || argc > 6)
 		return (1);
-	start_board(&b, argv);
+	start_board(&board, argv);
 	if (argc == 6)
-		b.meals_limit = ft_atoi(argv[5]);
-	init_mutexes(&b);
-	b.start_time = get_t();
-	make_players(-1, &b, argv);
-	pthread_create(&death_monitor, NULL, monitor, &b);
+		board.meals_limit = ft_atoi(argv[5]);
+	init_mutexes(&board);
+	board.start_time = get_t();
+	make_players(-1, &board, argv);
+	pthread_create(&death_monitor, NULL, monitor, &board);
 	pthread_join(death_monitor, NULL);
 	i = -1;
-	while (++i < b.num_philos)
-		pthread_join(b.players[i]->thread, NULL);
+	while (++i < board.num_philos)
+		pthread_join(board.players[i]->thread, NULL);
+	cleanup_board(&board, -1);
 	return (0);
 }
